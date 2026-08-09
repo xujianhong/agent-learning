@@ -14,7 +14,6 @@ Rules:
 - Assume the user understands basic programming.
 - Give examples when useful.
 - Don't just give the answer; explain why it works."""
-
 }]
 
 while True:
