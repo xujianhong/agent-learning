@@ -1,7 +1,7 @@
 import time
 from ollama import chat
 
-# start = time.perf_counter()
+
 
 conversation = [
 	{
@@ -46,17 +46,3 @@ while True:
 		"role": "assistant",
 		"content": answer,
 		})
-# response = chat(
-# 	model = "qwen:latest",
-# 	messages=[
-# 		{
-# 	 	"role": "user",
-# 		"content": "Explain what an AI agent is in one sentence."
-# 		}
-# 	],
-# )
-
-# end = time.time()
-
-# print(response.message.content)
-# print(f"Execution time: {end - start:.2f} seconds")
