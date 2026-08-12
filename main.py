@@ -1,27 +1,8 @@
 import time
 from ollama import chat
 
-from memory import (
-	load_memory, 
-	save_memory,
-	extract_memories,
-	merge_memories,
-)
+from vector_memory import search_memory
 
-memory = load_memory()
-
-memory_context = f"""
-Here are some things you remember about the user.
-
-Facts:
-{memory['facts']}
-
-Preferences:
-{memory['preferences']}
-
-Goals:
-{memory['goals']}
-"""
 
 conversation=[
 	{
@@ -34,35 +15,41 @@ and AI agent development.
 
 Explain concepts clearly and give examples
 when useful.
-
-{memory_context}
 """
 	}
 ]
-
-
 
 while True:
 	user_input = input("You: ")
 
 	if user_input.lower() in {"exit","quit"}:
-
-		new_memories = extract_memories(conversation)
-
-		memory = merge_memories(
-			memory, 
-			new_memories
-		)
-
-		save_memory(memory)
-
-		print("Long-term memory saved.")
-
 		break
 
+	# Search long-term memory
+	relevant_memories = search_memory(
+		user_input,
+		n_results = 3,
+	)
+
+	memory_context = "\n".join(
+		f"- {memory}"
+		for memory in relevant_memories
+	)
+
+	#Add memory to the current request
+	user_message = f"""
+Relevant memories about the user:
+
+{memory_context}
+
+Current user message:
+
+{user_input}
+"""
+	print(f"\n{user_message}")
 	conversation.append({
 		"role": "user",
-		"content": user_input,
+		"content": user_message,
 	})
 
 	# start = time.perf_counter()
@@ -76,7 +63,7 @@ while True:
 	# print(f"[{time.perf_counter() - start:.2f}s] Finished qwen")
 	answer = response.message.content
 
-	print(f"Assistant: {answer}")
+	print(f"\nAssistant: {answer}")
 
 	# print(f"[{time.perf_counter() - start:.2f}s] Finished printing answer")
 
@@ -84,5 +71,3 @@ while True:
 		"role": "assistant",
 		"content": answer,
 	})
-
-	
