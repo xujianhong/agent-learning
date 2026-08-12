@@ -1,32 +1,63 @@
 import time
 from ollama import chat
 
-from memory import load_memory, save_memory
+from memory import (
+	load_memory, 
+	save_memory,
+	extract_memories,
+	merge_memories,
+)
 
-conversation = load_memory()
+memory = load_memory()
 
-if not conversation:
-    conversation.append({
-            "role": "system",
-            "content": """
+memory_context = f"""
+Here are some things you remember about the user.
+
+Facts:
+{memory['facts']}
+
+Preferences:
+{memory['preferences']}
+
+Goals:
+{memory['goals']}
+"""
+
+conversation=[
+	{
+		"role": "system",
+		"content": """
 You are a Python programming tutor.
 
-Your job is to help the user learn Python and AI agent development.
+Your job is to help the user learn Python 
+and AI agent development.
 
-Rules:
-- Explain concepts clearly.
-- Assume the user understands basic programming.
-- Give examples when useful.
-- Don't just give the answer; explain why it works.
+Explain concepts clearly and give examples
+when useful.
+
+{memory_context}
 """
-})
+	}
+]
+
+
 
 while True:
 	user_input = input("You: ")
 
 	if user_input.lower() in {"exit","quit"}:
-		save_memory(conversation)
-		print("Memory saved.")
+
+		new_memories = extract_memories(conversation)
+
+		memory = merge_memories(
+			memory, 
+			new_memories
+		)
+
+		save_memory(memory)
+
+		print("Long-term memory saved.")
+
 		break
 
 	conversation.append({
@@ -54,5 +85,4 @@ while True:
 		"content": answer,
 	})
 
-	save_memory(conversation)
 	
