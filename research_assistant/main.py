@@ -6,7 +6,7 @@ def main():
 	agent = ResearchAgent()
 
 	print("=================================")
-	print("	AI Research Agent")
+	print("	AI Research Assistant")
 	print("=================================")
 
 	while True:
