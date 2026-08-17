@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timezone
 
 import chromadb
 from ollama import embed
@@ -16,6 +17,8 @@ collection = client.get_or_create_collection(
 	metadata={"hnsw:space": "cosine"},
 )
 
+def now():
+	return datetime.now(timezone.utc).isoformat()
 
 def create_embedding(text):
 	response = embed(
@@ -25,28 +28,35 @@ def create_embedding(text):
 
 	return response["embeddings"][0]
 
-def add_memory(memory):
-	existing = search_memory(
-		memory,
-		n_results=1,
-		max_distance=0.15,
-	)
-
-	if existing:
-		print(f"\n[Duplicate memory skipped] {memory}")
-		return
-
-	embedding = create_embedding(memory)
-
+def add_memory(
+	text,
+	category="fact",
+	confidence=1.0,
+	source="user",
+):
 	memory_id = str(uuid.uuid4())
+
+	timestamp = now()
+
+	embedding = create_embedding(text)
 
 	collection.add(
 		ids =[memory_id],
 		embeddings =[embedding],
-		documents =[memory],
+		documents =[text],
+		metadatas=[{
+			"category": category,
+			"created_at": timestamp,
+			"updated_at": timestamp,
+			"source":source,
+			"confidence":confidence,
+
+		}],
 	)
 
-	print(f"\n[Memory saved] {memory}")
+	print(f"\n[Memory added] {text}")
+
+	return memory_id
 
 
 def search_memory(
@@ -67,18 +77,94 @@ def search_memory(
 			n_results,
 			collection.count(),
 		),
+		include=[
+			"documents",
+			"metadatas",
+			"distances",
+		],
 	)
 
-	memories = results["documents"][0]
-	distances = results["distances"][0]
+	memories = []
 
-	relevant_memories = []
-
-	for memory, distance in zip(
-		memories,
-		distances,
+	for memory_id, document, metadata, distance in zip(
+		results["ids"][0],
+		results["documents"][0],
+		results["metadatas"][0],
+		results["distances"][0],
 	):
-		if distance <= max_distance:
-			relevant_memories.append(memory)
 
-	return relevant_memories
+		if distance <= max_distance:
+
+			memories.append({
+				"id": memory_id,
+				"text": document,
+				"metadata": metadata,
+				"distance": distance,
+			})
+
+	return memories
+
+
+def update_memory(
+	memory_id,
+	new_text,
+	category=None,
+	confidence=None,
+):
+	existing = collection.get(
+		ids=[memory_id],
+		include=["metadatas"],
+	)
+
+	if not existing["ids"]:
+		print(
+			f"[Memory update failed] "
+			f"{memory_id} not found"
+		)
+		return
+
+	old_metadata = existing["metadatas"][0]
+
+	metadata = {
+		"category":(
+			category
+			if category is not None
+			else old_metadata.get("category","fact")
+		),
+		"created_at": old_metadata.get(
+			"created_at",
+			now(),
+		),
+		"updated_at":now(),
+		"source": old_metadata.get(
+			"source",
+			"user",
+		),
+		"confidence":(
+			confidence
+			if confidence is not None
+			else old_metadata.get(
+				"confidence",
+				1.0,
+			)
+		),
+	}
+
+	embedding = create_embedding(new_text)
+
+	collection.update(
+		ids=[memory_id],
+		embeddings=[embedding],
+		documents=[new_text],
+		metadatas=[metadata],
+	)
+
+	print(f"[Memory updated] {new_text}")
+
+
+def delete_memory(memory_id):
+	collection.delete(
+		ids=[memory_id],
+	)
+
+	print(f"[Memory deleted] {memory_id}")

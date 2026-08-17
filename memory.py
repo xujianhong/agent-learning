@@ -13,8 +13,32 @@ MEMORY_SCHEMA = {
 		"memories":{
 			"type": "array",
 			"items": {
-				"type": "string"
-			}
+				"type": "object",
+				"properties":{
+					"text":{
+						"type": "string"
+					},
+					"category":{
+						"type": "string",
+						"enum":[
+							"fact",
+							"preference",
+							"goal",
+							"interest",
+							"project",
+							"constraint",
+						],
+					},
+					"confidence":{
+						"type": "number"
+					},
+				},
+				"required": [
+					"text",
+					"category",
+					"confidence",
+				],
+			},
 		}
 	},
 	"required": ["memories"]
@@ -64,28 +88,33 @@ IMPORTANT:
 The strings inside "memories" must contain REAL information
 from the user's message.
 
-For example, if the user says:
+Examples:
 
-I am learning Python because I want to build AI agents.
+User:
+"I am learning Python."
 
-The correct output is:
-{{
-	"memories":[
-		"User is learning Python",
-		"User wants to build AI agents"
-	]
-}}
+Memory:
+"User is learning Python"
 
-Do NOT output the words "memory 1", "memory 2", or any
-other placeholder text.
+User:
+"I prefer Python over JavaScript."
 
-If the user's message contains no useful long-term information,
+Memory:
+"User prefers Python over JavaScript"
+
+User:
+"I am building an AI agent."
+
+Memory:
+"User is building an AI agent"
+
+If there is nothing worth remembering,
 return an empty memories array.
 
 User message:
 {user_message}
 """
-	# print(f"\n{prompt}")
+	print(f"\n{prompt}")
 	response = chat(
 		model = MODEL,
 		messages =[
@@ -98,18 +127,11 @@ User message:
 	)
 
 	result = response.message.content
-
+	print(f"\n{result}")
 	try:
 		data = json.loads(result)
 
-		memories = data.get("memories",[])
-
-		return [
-			memory.strip()
-			for memory in memories
-			if isinstance(memory,str)
-			and memory.strip()
-		]
+		return data.get("memories",[])
 
 	except json.JSONDecodeError:
 		print("\n[Memory extraction failed]")

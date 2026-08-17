@@ -6,6 +6,8 @@ from vector_memory import(
 	search_memory,
 )
 
+from memory_manager import process_memory
+
 MODEL = "qwen:latest"
 
 
@@ -101,4 +103,4 @@ Current user message:
 	# ------------------------------------------------
 
 	for memory in new_memories:
-		add_memory(memory)
+		process_memory(memory)
